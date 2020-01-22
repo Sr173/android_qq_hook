@@ -14,21 +14,6 @@ function toHexString(bytes) {
     return string;
 }
 
-function toHexStringWithPos(bytes, pos, length) {
-    if (bytes == null){
-        return "";
-    }
-    var string = "";
-    for (var i = pos; i < pos + length; i++) {
-        var s = (bytes[i] & 0xFF) <= 0xF ? ('0' + (bytes[i] & 0xFF).toString(16)) : (bytes[i] & 0xFF).toString(16);
-        if (s.length != 2) {
-            console.log("error", s);
-        }
-        string += s;
-    }
-    return string;
-}
-
 function show_java_call_stack() {
     var Exc = Java.use("java.lang.Exception");
     var Log = Java.use("android.util.Log");
@@ -38,21 +23,25 @@ function show_java_call_stack() {
 }
 
 Java.perform(function () {
-    var StringClass = Java.use("java.lang.String");
 
     var cryptor = Java.use("oicq.wlogin_sdk.tools.cryptor");
+    var StringClass = Java.use("java.lang.String");
+
     cryptor.decrypt.implementation = function (array , pos, length, key) {
+        console.log("encrypt");
         var ret = this.decrypt(array , pos, length, key);
-        console.log("ON_DECRYPT_ARRAY", toHexStringWithPos(array, pos, length));
+        console.log("ON_DECRYPT_ARRAY", toHexString(array));
         console.log("ON_DECRYPT_RET", toHexString(ret));
         console.log("ON_DECRYPT_KEY", toHexString(key));
         return ret;
     };
 
-    var cryptor = Java.use("oicq.wlogin_sdk.tools.cryptor");
     cryptor.encrypt.implementation = function (array , pos, length, key) {
+        // console.log("---------------------------------------------------");
+        // show_java_call_stack();
+        // console.log("---------------------------------------------------");
         var ret = this.encrypt(array , pos, length, key);
-        console.log("ON_ENCRYPT_ARRAY", toHexStringWithPos(array, pos, length));
+        console.log("ON_ENCRYPT_ARRAY", toHexString(array));
         console.log("ON_ENCRYPT_RET", toHexString(ret));
         console.log("ON_ENCRYPT_KEY", toHexString(key));
         return ret;
@@ -75,12 +64,29 @@ Java.perform(function () {
         return CodecWarpper.nativeSetAccountKey(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     };
 
+
+
     if (Module.findExportByName("libcodecwrapperV2.so", "Java_com_tencent_qphone_base_util_CodecWarpper_encodeRequest")) {
         Interceptor.attach(Module.findExportByName("libcodecwrapperV2.so", "Java_com_tencent_qphone_base_util_CodecWarpper_encodeRequest"), {
             onEnter: function (args) {
                 console.log("cmd", Java.cast(args[7], StringClass));
             },
             onLeave: function (retval) {
+            }
+        });
+    };
+    if (Module.findExportByName("libcodecwrapperV2.so", "Java_com_tencent_qphone_base_util_CodecWarpper_encodeRequest")) {
+
+        Interceptor.attach(Module.findBaseAddress("libcodecwrapperV2.so").add(0x338E2), {
+            onEnter: function (args) {
+                var buffer = [];
+                for (var i = 0; i < 16; i++) {
+                    buffer[i] = (new NativePointer( parseInt(args[0]) + 4 + i).readU8());
+                }
+                console.log("ON_NATIVE_ENCRYPT_KEY", toHexString(buffer));
+            },
+            onLeave: function (retval) {
+
             }
         });
     }
